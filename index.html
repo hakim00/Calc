@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>계산기</title>
+<script>
+  (() => {
+    const param = new URLSearchParams(window.location.search).get("scoutTheme");
+    const theme =
+      param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<style>
+  :root {
+    color-scheme: light;
+    --cp-bg: #f7f4ef;
+    --cp-bg-elevated: #fcfbf8;
+    --cp-surface: #ffffff;
+    --cp-surface-soft: #f5f5f5;
+    --cp-border: #dedede;
+    --cp-border-strong: #919191;
+    --cp-text: #242424;
+    --cp-text-muted: #5c5c5c;
+    --cp-text-soft: #6f6f6f;
+    --cp-accent: #b11f4b;
+    --cp-accent-hover: #9a1a41;
+    --cp-accent-soft: rgba(177, 31, 75, 0.08);
+    --cp-accent-fg: #ffffff;
+    --cp-success: #16a34a;
+    --cp-danger: #dc2626;
+    --cp-warning: #f59e0b;
+    --cp-link: #0078d4;
+    --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+    --cp-overlay: rgba(255, 255, 255, 0.8);
+    --cp-panel: rgba(255, 255, 255, 0.86);
+    --cp-panel-strong: rgba(255, 255, 255, 0.96);
+    --cp-sheen: rgba(255, 255, 255, 0.55);
+    --cp-highlight: rgba(177, 31, 75, 0.12);
+  }
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --cp-bg: #3d3b3a;
+    --cp-bg-elevated: #343231;
+    --cp-surface: #292929;
+    --cp-surface-soft: #2e2e2e;
+    --cp-border: #474747;
+    --cp-border-strong: #5f5f5f;
+    --cp-text: #dedede;
+    --cp-text-muted: #919191;
+    --cp-text-soft: #b0b0b0;
+    --cp-accent: #fd8ea1;
+    --cp-accent-hover: #fb7b91;
+    --cp-accent-soft: rgba(253, 142, 161, 0.14);
+    --cp-accent-fg: #1a1a1a;
+    --cp-success: #4ade80;
+    --cp-danger: #f87171;
+    --cp-warning: #fbbf24;
+    --cp-link: #4da6ff;
+    --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+    --cp-overlay: rgba(41, 41, 41, 0.88);
+    --cp-panel: rgba(41, 41, 41, 0.72);
+    --cp-panel-strong: rgba(41, 41, 41, 0.96);
+    --cp-sheen: rgba(255, 255, 255, 0.04);
+    --cp-highlight: rgba(253, 142, 161, 0.12);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--cp-bg);
+    color: var(--cp-text);
+    font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  .calc {
+    width: 320px;
+    background: var(--cp-surface);
+    border: 1px solid var(--cp-border);
+    border-radius: 16px;
+    box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14);
+    padding: 16px;
+  }
+
+  .memory-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 18px;
+    font-size: 12px;
+    color: var(--cp-accent);
+    font-weight: 600;
+    padding: 0 4px 4px;
+    min-height: 18px;
+  }
+
+  .memory-indicator .mem-label {
+    min-width: 14px;
+  }
+
+  .memory-indicator .mem-toggle {
+    cursor: pointer;
+    color: var(--cp-text-muted);
+    font-weight: 600;
+    text-decoration: underline;
+    user-select: none;
+  }
+
+  .memory-indicator .mem-toggle:hover {
+    color: var(--cp-accent);
+  }
+
+  .memory-history {
+    display: none;
+    max-height: 160px;
+    overflow-y: auto;
+    background: var(--cp-surface-soft);
+    border: 1px solid var(--cp-border);
+    border-radius: 0.625rem;
+    margin-bottom: 10px;
+    padding: 6px 10px;
+  }
+
+  .memory-history.open {
+    display: block;
+  }
+
+  .memory-history .mem-empty {
+    font-size: 12px;
+    color: var(--cp-text-soft);
+    text-align: center;
+    padding: 8px 0;
+  }
+
+  .memory-history ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .memory-history li {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-family: Consolas, "Courier New", Courier, monospace;
+    font-size: 12.5px;
+    color: var(--cp-text-muted);
+    padding: 4px 0;
+    border-bottom: 1px solid var(--cp-border);
+  }
+
+  .memory-history li:last-child {
+    border-bottom: none;
+  }
+
+  .memory-history li .mem-op {
+    color: var(--cp-accent);
+    font-weight: 600;
+    min-width: 22px;
+  }
+
+  .memory-history li .mem-total {
+    color: var(--cp-text);
+    font-weight: 600;
+  }
+
+  .memory-history .mem-clear-row {
+    text-align: center;
+    padding-top: 4px;
+  }
+
+  .memory-history .mem-clear-btn {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 8px;
+  }
+
+  .display {
+    background: var(--cp-surface-soft);
+    border: 1px solid var(--cp-border);
+    border-radius: 0.625rem;
+    padding: 16px 14px;
+    margin-bottom: 12px;
+    text-align: right;
+    overflow: hidden;
+  }
+
+  .display .expression {
+    font-size: 13px;
+    color: var(--cp-text-muted);
+    min-height: 16px;
+    font-family: Consolas, "Courier New", Courier, monospace;
+    white-space: nowrap;
+    overflow-x: auto;
+  }
+
+  .display .result {
+    font-size: 32px;
+    font-weight: 600;
+    font-family: Consolas, "Courier New", Courier, monospace;
+    overflow-x: auto;
+    white-space: nowrap;
+    color: var(--cp-text);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  button {
+    font-family: inherit;
+    font-size: 16px;
+    border: 1px solid var(--cp-border);
+    background: var(--cp-surface-soft);
+    color: var(--cp-text);
+    border-radius: 0.625rem;
+    padding: 14px 0;
+    cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease, transform 0.05s ease;
+  }
+
+  button:hover {
+    background: var(--cp-accent-soft);
+    border-color: var(--cp-border-strong);
+  }
+
+  button:active {
+    transform: scale(0.96);
+  }
+
+  button.op {
+    background: var(--cp-accent-soft);
+    color: var(--cp-accent);
+    font-weight: 600;
+  }
+
+  button.op:hover {
+    background: var(--cp-highlight);
+  }
+
+  button.equals {
+    background: var(--cp-accent);
+    color: var(--cp-accent-fg);
+    border-color: var(--cp-accent);
+    grid-column: span 2;
+  }
+
+  button.equals:hover {
+    background: var(--cp-accent-hover);
+  }
+
+  button.mem {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--cp-text-soft);
+  }
+
+  button.zero {
+    grid-column: span 2;
+  }
+
+  button.clear {
+    color: var(--cp-danger);
+  }
+</style>
+</head>
+<body>
+  <div class="calc">
+    <div class="memory-indicator">
+      <span class="mem-label" id="memIndicator"></span>
+      <span class="mem-toggle" id="memHistoryToggle">메모리 내역 ▾</span>
+    </div>
+    <div class="memory-history" id="memHistory">
+      <div class="mem-empty" id="memHistoryEmpty">저장된 메모리 내역이 없습니다.</div>
+      <ul id="memHistoryList"></ul>
+      <div class="mem-clear-row" id="memClearRow" style="display:none;">
+        <button class="mem-clear-btn clear" data-action="mc">내역 지우기 (MC)</button>
+      </div>
+    </div>
+    <div class="display">
+      <div class="expression" id="expression">&nbsp;</div>
+      <div class="result" id="result">0</div>
+    </div>
+    <div class="grid">
+      <button class="mem" data-action="mc">MC</button>
+      <button class="mem" data-action="mr">MR</button>
+      <button class="mem" data-action="m-plus">M+</button>
+      <button class="mem" data-action="m-minus">M-</button>
+
+      <button class="clear" data-action="clear">C</button>
+      <button data-action="negate">±</button>
+      <button data-action="percent">%</button>
+      <button class="op" data-action="divide">÷</button>
+
+      <button data-num="7">7</button>
+      <button data-num="8">8</button>
+      <button data-num="9">9</button>
+      <button class="op" data-action="multiply">×</button>
+
+      <button data-num="4">4</button>
+      <button data-num="5">5</button>
+      <button data-num="6">6</button>
+      <button class="op" data-action="subtract">−</button>
+
+      <button data-num="1">1</button>
+      <button data-num="2">2</button>
+      <button data-num="3">3</button>
+      <button class="op" data-action="add">+</button>
+
+      <button class="zero" data-num="0">0</button>
+      <button data-action="decimal">.</button>
+      <button class="equals" data-action="equals">=</button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const resultEl = document.getElementById('result');
+  const expressionEl = document.getElementById('expression');
+  const memIndicator = document.getElementById('memIndicator');
+  const memHistoryToggle = document.getElementById('memHistoryToggle');
+  const memHistoryPanel = document.getElementById('memHistory');
+  const memHistoryList = document.getElementById('memHistoryList');
+  const memHistoryEmpty = document.getElementById('memHistoryEmpty');
+  const memClearRow = document.getElementById('memClearRow');
+
+  let current = '0';
+  let previous = null;
+  let operator = null;
+  let overwrite = true;
+  let memory = 0;
+  let memoryLog = []; // { op: '+'|'-'|'C', value, total }
+
+  function formatNumber(numStr) {
+    if (numStr === '' || numStr === '-' ) return numStr;
+    const num = parseFloat(numStr);
+    if (Number.isNaN(num)) return '0';
+    if (Math.abs(num) >= 1e15) return num.toExponential(6);
+    return num.toString();
+  }
+
+  function updateDisplay() {
+    resultEl.textContent = current;
+    if (operator && previous !== null) {
+      expressionEl.textContent = `${formatNumber(previous)} ${opSymbol(operator)}`;
+    } else {
+      expressionEl.textContent = '\u00a0';
+    }
+    memIndicator.textContent = memory !== 0 ? 'M' : '';
+    renderMemoryHistory();
+  }
+
+  function opSymbol(op) {
+    switch (op) {
+      case 'add': return '+';
+      case 'subtract': return '−';
+      case 'multiply': return '×';
+      case 'divide': return '÷';
+      default: return '';
+    }
+  }
+
+  function inputNumber(d) {
+    if (overwrite) {
+      current = (d === '0') ? '0' : d;
+      overwrite = false;
+    } else {
+      if (current === '0' && d !== '.') {
+        current = d;
+      } else if (d === '.' ) {
+        if (!current.includes('.')) current += '.';
+      } else {
+        current += d;
+      }
+    }
+    updateDisplay();
+  }
+
+  function compute(a, b, op) {
+    switch (op) {
+      case 'add': return a + b;
+      case 'subtract': return a - b;
+      case 'multiply': return a * b;
+      case 'divide': return b === 0 ? NaN : a / b;
+      default: return b;
+    }
+  }
+
+  function setOperator(op) {
+    if (operator && !overwrite) {
+      const result = compute(parseFloat(previous), parseFloat(current), operator);
+      current = Number.isNaN(result) ? '오류' : formatNumber(result.toString());
+      previous = current;
+    } else {
+      previous = current;
+    }
+    operator = op;
+    overwrite = true;
+    updateDisplay();
+  }
+
+  function equals() {
+    if (operator === null) return;
+    const result = compute(parseFloat(previous), parseFloat(current), operator);
+    current = Number.isNaN(result) ? '오류' : formatNumber(result.toString());
+    operator = null;
+    previous = null;
+    overwrite = true;
+    updateDisplay();
+  }
+
+  function clearAll() {
+    current = '0';
+    previous = null;
+    operator = null;
+    overwrite = true;
+    updateDisplay();
+  }
+
+  function negate() {
+    if (current === '0') return;
+    current = current.startsWith('-') ? current.slice(1) : '-' + current;
+    updateDisplay();
+  }
+
+  function percent() {
+    const num = parseFloat(current) / 100;
+    current = formatNumber(num.toString());
+    overwrite = true;
+    updateDisplay();
+  }
+
+  function memoryClear() {
+    memory = 0;
+    memoryLog = [];
+    updateDisplay();
+  }
+
+  function memoryRecall() {
+    current = formatNumber(memory.toString());
+    overwrite = true;
+    updateDisplay();
+  }
+
+  function memoryAdd() {
+    const value = parseFloat(current) || 0;
+    memory += value;
+    memoryLog.push({ op: '+', value, total: memory });
+    updateDisplay();
+  }
+
+  function memorySubtract() {
+    const value = parseFloat(current) || 0;
+    memory -= value;
+    memoryLog.push({ op: '−', value, total: memory });
+    updateDisplay();
+  }
+
+  function renderMemoryHistory() {
+    if (memoryLog.length === 0) {
+      memHistoryEmpty.style.display = 'block';
+      memHistoryList.innerHTML = '';
+      memClearRow.style.display = 'none';
+      return;
+    }
+    memHistoryEmpty.style.display = 'none';
+    memClearRow.style.display = 'block';
+    memHistoryList.innerHTML = memoryLog
+      .map((entry, idx) => `
+        <li>
+          <span class="mem-op">${entry.op}${formatNumber(Math.abs(entry.value).toString())}</span>
+          <span class="mem-total">= ${formatNumber(entry.total.toString())}</span>
+        </li>
+      `)
+      .join('');
+  }
+
+  memHistoryToggle.addEventListener('click', () => {
+    const isOpen = memHistoryPanel.classList.toggle('open');
+    memHistoryToggle.textContent = isOpen ? '메모리 내역 ▴' : '메모리 내역 ▾';
+  });
+
+  document.querySelectorAll('button[data-num]').forEach(btn => {
+    btn.addEventListener('click', () => inputNumber(btn.dataset.num));
+  });
+
+  document.querySelectorAll('button[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.action;
+      switch (action) {
+        case 'add': case 'subtract': case 'multiply': case 'divide':
+          setOperator(action); break;
+        case 'equals': equals(); break;
+        case 'clear': clearAll(); break;
+        case 'negate': negate(); break;
+        case 'percent': percent(); break;
+        case 'decimal': inputNumber('.'); break;
+        case 'mc': memoryClear(); break;
+        case 'mr': memoryRecall(); break;
+        case 'm-plus': memoryAdd(); break;
+        case 'm-minus': memorySubtract(); break;
+      }
+    });
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key >= '0' && e.key <= '9') inputNumber(e.key);
+    else if (e.key === '.') inputNumber('.');
+    else if (e.key === '+') setOperator('add');
+    else if (e.key === '-') setOperator('subtract');
+    else if (e.key === '*') setOperator('multiply');
+    else if (e.key === '/') { e.preventDefault(); setOperator('divide'); }
+    else if (e.key === 'Enter' || e.key === '=') equals();
+    else if (e.key === 'Escape') clearAll();
+    else if (e.key === 'Backspace') {
+      if (!overwrite) {
+        current = current.length > 1 ? current.slice(0, -1) : '0';
+        if (current === '-') current = '0';
+        updateDisplay();
+      }
+    }
+  });
+
+  updateDisplay();
+})();
+</script>
+</body>
+</html>

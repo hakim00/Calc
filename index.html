@@ -7,8 +7,9 @@
 <script>
   (() => {
     const param = new URLSearchParams(window.location.search).get("scoutTheme");
+    const saved = localStorage.getItem("calc-theme");
     const theme =
-      param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      param || saved || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
     document.documentElement.setAttribute("data-theme", theme);
   })();
 </script>
@@ -98,6 +99,36 @@
     font-weight: 600;
     padding: 0 4px 4px;
     min-height: 18px;
+  }
+
+  .calc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    padding: 0 2px;
+  }
+
+  .calc-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--cp-text-muted);
+  }
+
+  .theme-toggle {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--cp-border);
+    background: var(--cp-surface-soft);
+    color: var(--cp-text);
+    cursor: pointer;
+  }
+
+  .theme-toggle:hover {
+    background: var(--cp-accent-soft);
+    border-color: var(--cp-border-strong);
   }
 
   .memory-indicator .mem-label {
@@ -280,6 +311,10 @@
 </head>
 <body>
   <div class="calc">
+    <div class="calc-header">
+      <span class="calc-title">계산기</span>
+      <button class="theme-toggle" id="themeToggle" type="button" title="테마 전환">☀️ 라이트</button>
+    </div>
     <div class="memory-indicator">
       <span class="mem-label" id="memIndicator"></span>
       <span class="mem-toggle" id="memHistoryToggle">메모리 내역 ▾</span>
@@ -337,6 +372,7 @@
   const memHistoryList = document.getElementById('memHistoryList');
   const memHistoryEmpty = document.getElementById('memHistoryEmpty');
   const memClearRow = document.getElementById('memClearRow');
+  const themeToggle = document.getElementById('themeToggle');
 
   let current = '0';
   let previous = null;
@@ -493,6 +529,21 @@
     const isOpen = memHistoryPanel.classList.toggle('open');
     memHistoryToggle.textContent = isOpen ? '메모리 내역 ▴' : '메모리 내역 ▾';
   });
+
+  function applyThemeButtonLabel() {
+    const theme = document.documentElement.getAttribute('data-theme');
+    themeToggle.textContent = theme === 'dark' ? '🌙 다크' : '☀️ 라이트';
+  }
+
+  themeToggle.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('calc-theme', next);
+    applyThemeButtonLabel();
+  });
+
+  applyThemeButtonLabel();
 
   const flashTimers = new WeakMap();
 

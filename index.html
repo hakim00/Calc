@@ -270,6 +270,12 @@
   button.clear {
     color: var(--cp-danger);
   }
+
+  button.key-active {
+    transform: scale(0.96);
+    background: var(--cp-accent-soft) !important;
+    border-color: var(--cp-border-strong);
+  }
 </style>
 </head>
 <body>
@@ -290,15 +296,15 @@
       <div class="result" id="result">0</div>
     </div>
     <div class="grid">
-      <button class="mem" data-action="mc">MC</button>
-      <button class="mem" data-action="mr">MR</button>
-      <button class="mem" data-action="m-plus">M+</button>
-      <button class="mem" data-action="m-minus">M-</button>
+      <button class="mem" data-action="mc" title="메모리 초기화 (Alt+M)">MC</button>
+      <button class="mem" data-action="mr" title="메모리 불러오기 (Ctrl+R)">MR</button>
+      <button class="mem" data-action="m-plus" title="메모리 더하기 (Ctrl+M)">M+</button>
+      <button class="mem" data-action="m-minus" title="메모리 빼기 (Ctrl+Shift+M)">M-</button>
 
-      <button class="clear" data-action="clear">C</button>
-      <button data-action="negate">±</button>
-      <button data-action="percent">%</button>
-      <button class="op" data-action="divide">÷</button>
+      <button class="clear" data-action="clear" title="전체 초기화 (Esc)">C</button>
+      <button data-action="negate" title="부호 전환">±</button>
+      <button data-action="percent" title="백분율 (%)">%</button>
+      <button class="op" data-action="divide" title="나누기 (/)">÷</button>
 
       <button data-num="7">7</button>
       <button data-num="8">8</button>
@@ -488,6 +494,19 @@
     memHistoryToggle.textContent = isOpen ? '메모리 내역 ▴' : '메모리 내역 ▾';
   });
 
+  const flashTimers = new WeakMap();
+
+  function flashButton(selector) {
+    const btn = document.querySelector(selector);
+    if (!btn) return;
+    btn.classList.add('key-active');
+    if (flashTimers.has(btn)) clearTimeout(flashTimers.get(btn));
+    flashTimers.set(btn, setTimeout(() => {
+      btn.classList.remove('key-active');
+      flashTimers.delete(btn);
+    }, 120));
+  }
+
   document.querySelectorAll('button[data-num]').forEach(btn => {
     btn.addEventListener('click', () => inputNumber(btn.dataset.num));
   });
@@ -512,15 +531,69 @@
   });
 
   window.addEventListener('keydown', (e) => {
-    if (e.key >= '0' && e.key <= '9') inputNumber(e.key);
-    else if (e.key === '.') inputNumber('.');
-    else if (e.key === '+') setOperator('add');
-    else if (e.key === '-') setOperator('subtract');
-    else if (e.key === '*') setOperator('multiply');
-    else if (e.key === '/') { e.preventDefault(); setOperator('divide'); }
-    else if (e.key === 'Enter' || e.key === '=') equals();
-    else if (e.key === 'Escape') clearAll();
-    else if (e.key === 'Backspace') {
+    // Memory shortcuts (Ctrl/Meta key combos)
+    if (e.ctrlKey || e.metaKey) {
+      const k = e.key.toLowerCase();
+      if (k === 'm' && e.shiftKey) {
+        e.preventDefault();
+        memorySubtract();
+        flashButton('[data-action="m-minus"]');
+        return;
+      }
+      if (k === 'm') {
+        e.preventDefault();
+        memoryAdd();
+        flashButton('[data-action="m-plus"]');
+        return;
+      }
+      if (k === 'r') {
+        e.preventDefault();
+        memoryRecall();
+        flashButton('[data-action="mr"]');
+        return;
+      }
+      // Let all other Ctrl/Meta combos pass through to the browser
+      return;
+    }
+    // Alt key: Alt+M = MC
+    if (e.altKey) {
+      if (e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        memoryClear();
+        flashButton('[data-action="mc"]');
+      }
+      return;
+    }
+
+    if (e.key >= '0' && e.key <= '9') {
+      inputNumber(e.key);
+      flashButton(`[data-num="${e.key}"]`);
+    } else if (e.key === '.') {
+      inputNumber('.');
+      flashButton('[data-action="decimal"]');
+    } else if (e.key === '+') {
+      setOperator('add');
+      flashButton('[data-action="add"]');
+    } else if (e.key === '-') {
+      setOperator('subtract');
+      flashButton('[data-action="subtract"]');
+    } else if (e.key === '*') {
+      setOperator('multiply');
+      flashButton('[data-action="multiply"]');
+    } else if (e.key === '/') {
+      e.preventDefault();
+      setOperator('divide');
+      flashButton('[data-action="divide"]');
+    } else if (e.key === '%') {
+      percent();
+      flashButton('[data-action="percent"]');
+    } else if (e.key === 'Enter' || e.key === '=') {
+      equals();
+      flashButton('[data-action="equals"]');
+    } else if (e.key === 'Escape') {
+      clearAll();
+      flashButton('[data-action="clear"]');
+    } else if (e.key === 'Backspace') {
       if (!overwrite) {
         current = current.length > 1 ? current.slice(0, -1) : '0';
         if (current === '-') current = '0';
